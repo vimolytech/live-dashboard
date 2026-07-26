@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  button, input { font-family: inherit; }
+
+  :root {
+    --text-primary: #FAFAFA;
+    --text-secondary: #B8B6B0;
+    --text-tertiary: #76746E;
+    --success: #6BE3A4;
+    --warning: #F2C063;
+    --danger: #FF6B6B;
+  }
+
+  body {
+    min-height: 100vh;
+    background: #050506;
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: max(32px, env(safe-area-inset-top)) 20px 178px;
+    position: relative;
+    z-index: 0;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: -10%;
+    background:
+      radial-gradient(600px circle at 82% 14%, rgba(224, 118, 88, 0.16), transparent 60%),
+      radial-gradient(600px circle at 18% 90%, rgba(180, 180, 200, 0.06), transparent 60%);
+    filter: blur(40px);
+    animation: washDrift 36s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @keyframes washDrift {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-3%, 2%) scale(1.05); }
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+    background-size: 3px 3px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  .card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 20px;
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  }
+
+  /* Component 1 - title */
+  .dash-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  @media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+  /* Bottom Bar - fixed queued/pending goal status */
+  .bottom-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 76px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 20px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(5,5,6,0) 0%, rgba(5,5,6,0.88) 35%, #050506 100%);
+    pointer-events: none;
+  }
+  .bottom-bar-inner {
+    pointer-events: auto;
+    width: 100%;
+    max-width: 1060px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  .bottom-bar-icon { font-size: 13px; color: #F2C063; filter: drop-shadow(0 0 4px rgba(242,192,99,0.6)); flex-shrink: 0; }
+  .bottom-bar-text {
+    flex: 1; font-size: 13px; font-weight: 600; color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .bottom-bar-meta {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; font-weight: 700; color: var(--text-secondary);
+    background: rgba(255,255,255,0.06);
+    padding: 3px 9px; border-radius: 999px; flex-shrink: 0;
+  }
+  .bottom-bar-label {
+    pointer-events: auto;
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--text-tertiary); margin-top: 7px;
+  }
+
+  /* Taskbar - fixed bottom navigation, room to grow with more screens */
+  .taskbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 25;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(8,8,9,0.42);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  }
+  .taskbar-item {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 7px 16px;
+    border-radius: 14px;
+    text-decoration: none;
+    background: transparent;
+    transition: background 0.2s ease;
+  }
+  .taskbar-item:hover { background: rgba(255,255,255,0.05); }
+  .taskbar-item.is-active { background: rgba(255,255,255,0.07); }
+  .taskbar-icon-badge {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    background: rgba(255,255,255,0.04);
+    filter: grayscale(1) opacity(0.55);
+    transition: background 0.2s ease, filter 0.2s ease;
+  }
+  .taskbar-item.is-active .taskbar-icon-badge {
+    background: rgba(255,255,255,0.14);
+    filter: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  .taskbar-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-tertiary);
+    transition: color 0.2s ease;
+  }
+  .taskbar-item.is-active .taskbar-label { color: var(--text-primary); }
+
+  /* Component 3 - Day Ring */
+  .day-ring-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .day-ring-left {
+    width: 220px; height: 220px;
+    position: relative;
+    flex-shrink: 0;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), filter 0.4s ease;
+  }
+  .day-ring-left:hover {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 22px rgba(224, 118, 88, 0.25));
+  }
+  .day-ring-svg { width: 100%; height: 100%; }
+  .ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+  .ring-fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke 0.7s cubic-bezier(0.22, 1, 0.36, 1), stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .day-ring-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none; text-align: center;
+  }
+  .day-ring-percent { font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+  .day-ring-phase {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.16em;
+    color: var(--text-tertiary); margin-top: 5px;
+  }
+  .day-ring-clock {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10.5px; color: var(--text-tertiary); margin-top: 2px;
+  }
+  .day-ring-right { max-width: 280px; display: flex; flex-direction: column; gap: 6px; }
+  .day-ring-status { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .day-ring-remaining { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: var(--text-secondary); }
+  .day-ring-hours { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; color: var(--text-tertiary); }
+  @media (max-width: 480px) {
+    .day-ring-left { width: 176px; height: 176px; }
+    .day-ring-percent { font-size: 36px; }
+    .day-ring-status { font-size: 13px; }
+  }
+
+  /* Component 4 - To Do List */
+  .section { margin-top: 8px; }
+  .section-title {
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-tertiary);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .section-title::before { content: ''; width: 18px; height: 1px; background: var(--text-tertiary); opacity: 0.6; }
+  .section-title::after  { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+
+  .gm-card { margin-bottom: 16px; position: relative; overflow: hidden; }
+  .gm-card:last-child { margin-bottom: 0; }
+  .gm-card.gm-all-done::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 120px;
+    background: radial-gradient(ellipse at top, rgba(107,227,164,0.12), transparent 70%);
+    pointer-events: none;
+  }
+  .gm-all-done .gm-progress-num, .gm-all-done .gm-progress-label { color: var(--success); }
+
+  .gm-header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; position: relative; }
+  .gm-eyebrow { font-size: 10.5px; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.18em; margin-bottom: 6px; }
+  .gm-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+
+  .gm-progress-row { display: flex; align-items: baseline; gap: 6px; }
+  .gm-card-tomorrow .gm-progress-row { display: none; }
+  .gm-progress-num { font-size: 42px; font-weight: 700; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+  .gm-progress-total { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 18px; color: var(--text-tertiary); }
+  .gm-progress-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.10em; color: var(--text-tertiary); }
+
+  .gm-streak {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-tertiary);
+    border: 1px solid transparent;
+    height: fit-content;
+  }
+  .gm-streak.gm-streak-active {
+    background: rgba(242,192,99,0.10);
+    color: #F2C063;
+    border-color: rgba(242,192,99,0.32);
+  }
+  .gm-streak-bolt { font-size: 13px; }
+  .gm-streak-active .gm-streak-bolt { filter: drop-shadow(0 0 6px rgba(242,192,99,0.6)); }
+  .gm-streak-num { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .gm-streak-label { text-transform: uppercase; letter-spacing: 0.10em; font-size: 10px; }
+
+  .gm-bar { display: flex; gap: 4px; height: 6px; margin-bottom: 16px; }
+  .gm-bar:empty { display: none; }
+  .gm-bar-seg { flex: 1; height: 100%; border-radius: 3px; background: rgba(255,255,255,0.06); }
+  .gm-bar-seg-done { background: #6BE3A4; box-shadow: 0 0 6px rgba(107,227,164,0.40); }
+
+  .empty-state { font-size: 12px; color: var(--text-tertiary); font-style: italic; padding: 14px 0; text-align: center; }
+
+  .goal-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 6px;
+    background: rgba(255,255,255,0.035);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+    transition: background 0.2s ease;
+  }
+  .goal-row:last-child { margin-bottom: 0; }
+  .goal-row:hover { background: rgba(255,255,255,0.06); }
+  .goal-row:hover .goal-drag-handle,
+  .goal-row:hover .goal-delete { opacity: 1; }
+  .goal-row.drag-over { border-top: 2px solid rgba(255,255,255,0.5); }
+
+  .goal-row.is-done { opacity: 0.45; background: rgba(107,227,164,0.04); }
+  .goal-row.is-done .goal-text { text-decoration: line-through; text-decoration-color: rgba(255,255,255,0.4); }
+
+  .goal-row.is-queued { background: rgba(242,192,99,0.10); box-shadow: inset 3px 0 0 0 #F2C063; }
+  .goal-row.is-queued .goal-text { color: #FFE2A8; }
+
+  .goal-row.is-queue-flashing { animation: gm-queue-flash 0.48s ease; }
+  @keyframes gm-queue-flash {
+    0%, 100% { background: transparent; transform: scale(1); }
+    50%      { background: rgba(242,192,99,0.32); transform: scale(1.015); }
+  }
+
+  .goal-drag-handle {
+    width: 14px; flex-shrink: 0;
+    color: var(--text-tertiary);
+    opacity: 0; transition: opacity 0.2s ease;
+    cursor: grab;
+    letter-spacing: -2px;
+    font-size: 14px;
+    user-select: none;
+  }
+
+  .goal-checkbox {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.18);
+    background: rgba(0,0,0,0.2);
+    position: relative;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    margin: 0;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .goal-checkbox:checked {
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: 0 0 12px rgba(107,227,164,0.40);
+  }
+  .goal-checkbox:checked::after {
+    content: '';
+    position: absolute; left: 7px; top: 3px;
+    width: 5px; height: 10px;
+    border: solid #06110B;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg) scale(0);
+    animation: checkPop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes checkPop { to { transform: rotate(40deg) scale(1); } }
+  .goal-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
+
+  .goal-text {
+    flex: 1;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    outline: none;
+    word-break: break-word;
+    cursor: text;
+  }
+  .goal-text[contenteditable="true"] { outline: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 2px 4px; }
+
+  .gm-queue-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-tertiary); opacity: 0.55;
+    font-size: 14px; flex-shrink: 0;
+    transition: opacity 0.2s ease, color 0.2s ease;
+  }
+  .gm-queue-btn.is-active { color: #F2C063; opacity: 1; filter: drop-shadow(0 0 4px rgba(242,192,99,0.65)); }
+  .gm-queue-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+  .goal-delete {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-tertiary); opacity: 0.5;
+    font-size: 16px; flex-shrink: 0;
+    transition: opacity 0.2s ease, color 0.2s ease;
+  }
+  .goal-delete:hover { color: var(--danger); opacity: 1; }
+
+  .gm-show-more {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 4px;
+    border: 1px dashed rgba(255,255,255,0.12);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .gm-show-more:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.24); }
+
+  .gm-push-btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 11px;
+    border: 1px dashed rgba(255,255,255,0.14);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .gm-push-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.28); }
+
+  .gm-input-wrap {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .gm-input {
+    flex: 1; min-width: 140px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .gm-input::placeholder { color: var(--text-tertiary); }
+  .gm-input:focus { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.07); }
+
+  .gm-btn-add {
+    background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+    color: #0A0A0B;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    border-radius: 12px;
+    padding: 11px 20px;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 14px rgba(0,0,0,0.3);
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .gm-btn-add:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+  .gm-btn-polish {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    padding: 11px 20px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .gm-btn-polish:hover { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+
+  .gm-status { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; min-height: 14px; }
+  .gm-status.is-error { color: var(--danger); }
+
+  .gm-tomorrow-count {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-tertiary);
+  }
+
+  /* Weather */
+  .weather-card { margin-bottom: 18px; }
+  .weather-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; }
+  .weather-place { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); margin-bottom: 6px; }
+  .weather-now { display: flex; align-items: center; gap: 10px; }
+  .weather-icon { font-size: 44px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35)); }
+  .weather-temp { font-size: 52px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .weather-desc { font-size: 14px; color: var(--text-secondary); margin-top: 2px; }
+  .weather-right { text-align: right; }
+  .weather-sub { font-size: 12px; color: var(--text-tertiary); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; margin-top: 3px; }
+
+  .weather-rain-note {
+    font-size: 12.5px; color: var(--text-secondary);
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 9px 12px;
+    margin-bottom: 6px;
+  }
+  .weather-rain-note.is-rain { background: rgba(107,178,227,0.14); color: #BFE0FF; }
+  .weather-tip {
+    font-size: 12px; color: var(--text-secondary);
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    padding: 9px 12px;
+    margin-bottom: 16px;
+  }
+
+  .weather-hourly { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 4px; scroll-behavior: smooth; }
+  .weather-hour { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 42px; padding: 4px 3px; border-radius: 10px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .weather-hour.is-now { background: rgba(255,255,255,0.05); }
+  .weather-hour-time { font-size: 10.5px; color: var(--text-tertiary); }
+  .weather-hour.is-now .weather-hour-time { color: var(--text-primary); font-weight: 700; }
+  .weather-hour-icon { font-size: 19px; }
+  .weather-hour-temp { font-size: 12px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .weather-hour-precip-bar {
+    width: 7px; height: 22px; border-radius: 3px;
+    background: rgba(255,255,255,0.07);
+    display: flex; align-items: flex-end;
+    overflow: hidden;
+  }
+  .weather-hour-precip-fill { width: 100%; border-radius: 3px; background: linear-gradient(180deg, #8FD3FF, #4FA8E0); }
+  .weather-hour-precip-label { font-size: 9px; color: #8FC7F2; min-height: 11px; }
+
+  .weather-daily { display: flex; flex-direction: column; gap: 2px; padding-top: 14px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .weather-day-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 12.5px; }
+  .weather-day-name { width: 60px; flex-shrink: 0; color: var(--text-secondary); font-weight: 600; }
+  .weather-day-icon { width: 24px; flex-shrink: 0; text-align: center; font-size: 16px; }
+  .weather-day-rain { width: 36px; flex-shrink: 0; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; color: #8FC7F2; text-align: right; }
+  .weather-day-range { flex: 1; display: flex; align-items: center; gap: 8px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .weather-day-min { color: var(--text-tertiary); width: 26px; text-align: right; }
+  .weather-day-max { color: var(--text-primary); width: 26px; }
+  .weather-day-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+  .weather-day-bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: linear-gradient(90deg, #7BAEDB, #F2C063); }
+  @media (max-width: 480px) {
+    .weather-temp { font-size: 40px; }
+    .weather-icon { font-size: 34px; }
+    .weather-day-name { width: 46px; }
+  }
+
+  /* News */
+  .news-card { margin-bottom: 18px; }
+  .news-section { margin-bottom: 22px; }
+  .news-section:last-child { margin-bottom: 0; }
+  .news-col-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--text-tertiary); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; align-items: start; }
+  @media (max-width: 640px) { .news-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; } }
+
+  .news-card-item {
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .news-card-clickable { cursor: pointer; transition: background 0.2s ease; }
+  .news-card-item:hover .news-card-clickable { background: rgba(255,255,255,0.03); }
+  .news-card-image { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: rgba(255,255,255,0.04); }
+  .news-card-image-placeholder {
+    width: 100%; aspect-ratio: 16 / 9;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+    font-size: 26px;
+  }
+  .news-card-body { padding: 12px 13px 13px; }
+  .news-card-title {
+    font-size: 13.5px; font-weight: 700; color: var(--text-primary); line-height: 1.35; margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .news-card-item:hover .news-card-title { color: #FFFFFF; }
+  .news-card-teaser {
+    font-size: 11.5px; color: var(--text-tertiary); line-height: 1.45; margin-bottom: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .news-card-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; color: var(--text-tertiary); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .news-card-chevron { transition: transform 0.2s ease, color 0.2s ease; }
+  .news-card-item.is-expanded .news-card-chevron { transform: rotate(180deg); color: var(--text-secondary); }
+
+  .news-card-full {
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+  }
+  .news-card-item.is-expanded .news-card-full { max-height: 900px; opacity: 1; }
+  .news-item-body-inner { padding: 0 13px 15px; }
+  .news-item-topline { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin: 2px 0 8px; }
+  .news-item-body-inner p { font-size: 12.5px; line-height: 1.55; color: var(--text-secondary); margin: 0 0 10px; }
+  .news-item-body-inner p:last-of-type { margin-bottom: 0; }
+  .news-item-loading { font-size: 12px; color: var(--text-tertiary); font-style: italic; padding: 0 13px 12px; }
+  .news-item-readmore {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; font-weight: 600; color: var(--text-secondary);
+    text-decoration: none; margin-top: 12px;
+  }
+  .news-item-readmore:hover { color: #FFFFFF; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.3); }
+  .news-status { font-size: 11px; color: var(--text-tertiary); font-style: italic; padding: 10px 0; }
+
+  /* Stocks */
+  .stocks-card { margin-bottom: 18px; }
+  .stocks-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stock-tile { flex: 1; min-width: 130px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 14px; }
+  .stock-tile-name { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--text-tertiary); margin-bottom: 6px; }
+  .stock-tile-price { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .stock-tile-change { font-size: 11.5px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; margin-top: 3px; }
+  .stock-tile-change.is-up { color: var(--success); }
+  .stock-tile-change.is-down { color: var(--danger); }
+
+  .stocks-status { font-size: 11px; color: var(--text-tertiary); font-style: italic; margin-top: 10px; }
+
+  /* MSCI World - dedicated analysis box */
+  .msci-card { margin-bottom: 18px; }
+  .msci-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 18px; }
+  .msci-eyebrow { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); margin-bottom: 6px; }
+  .msci-name { font-size: 12px; color: var(--text-secondary); }
+  .msci-price-block { text-align: right; }
+  .msci-price { font-size: 36px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .msci-change { font-size: 14px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; margin-top: 4px; }
+  .msci-change.is-up { color: var(--success); }
+  .msci-change.is-down { color: var(--danger); }
+
+  .msci-chart-wrap { width: 100%; height: 220px; margin-bottom: 6px; }
+  .msci-chart-wrap svg { width: 100%; height: 100%; display: block; }
+  .msci-chart-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-tertiary); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; margin-bottom: 18px; }
+
+  .msci-analysis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .msci-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: 4px; display: block; }
+  .msci-stat-value { font-size: 15px; font-weight: 700; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .msci-stat-value.is-up { color: var(--success); }
+  .msci-stat-value.is-down { color: var(--danger); }
+
+  .msci-range-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); position: relative; margin-bottom: 8px; }
+  .msci-range-fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #7BAEDB, #F2C063); }
+  .msci-range-dot { position: absolute; top: 50%; left: 0; width: 9px; height: 9px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 2px rgba(0,0,0,0.4); transform: translate(-50%, -50%); }
+  .msci-range-labels { display: flex; justify-content: space-between; font-size: 10px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--text-tertiary); margin-bottom: 16px; }
+
+  .msci-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 14px; }
+  @media (max-width: 640px) {
+    .msci-analysis { grid-template-columns: 1fr 1fr; }
+    .msci-price { font-size: 28px; }
+  }
+
+  /* Ideas */
+  .idea-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 6px;
+    background: rgba(255,255,255,0.035);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.2s ease;
+  }
+  .idea-row:last-child { margin-bottom: 0; }
+  .idea-row:hover { background: rgba(255,255,255,0.06); }
+  .idea-row:hover .idea-drag-handle, .idea-row:hover .idea-delete { opacity: 1; }
+  .idea-row.drag-over { border-top: 2px solid rgba(255,255,255,0.5); }
+  .idea-drag-handle { width: 14px; flex-shrink: 0; color: var(--text-tertiary); opacity: 0; transition: opacity 0.2s ease; cursor: grab; letter-spacing: -2px; font-size: 14px; user-select: none; }
+  .idea-rank { width: 22px; flex-shrink: 0; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; color: var(--text-tertiary); }
+  .idea-text { flex: 1; font-size: 13.5px; color: var(--text-primary); outline: none; word-break: break-word; cursor: text; }
+  .idea-text[contenteditable="true"] { outline: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 2px 4px; }
+  .idea-delete { background: none; border: none; cursor: pointer; color: var(--text-tertiary); opacity: 0.5; font-size: 16px; flex-shrink: 0; transition: opacity 0.2s ease, color 0.2s ease; }
+  .idea-delete:hover { color: var(--danger); opacity: 1; }
+</style>
+</head>
+<body>
+
+  <h1 class="dash-title">Vincent Dashboard</h1>
+
+  <div class="card day-ring-card">
+    <div class="day-ring-left">
+      <svg class="day-ring-svg" viewBox="0 0 120 120">
+        <defs>
+          <filter id="ringGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <circle class="ring-track" cx="60" cy="60" r="52" />
+        <circle class="ring-fill" id="dayRingFill" cx="60" cy="60" r="52" transform="rotate(-90 60 60)" filter="url(#ringGlow)" />
+      </svg>
+      <div class="day-ring-overlay">
+        <div class="day-ring-percent" id="dayRingPercent">—</div>
+        <div class="day-ring-phase" id="dayRingPhase">SLEEPING</div>
+        <div class="day-ring-clock" id="dayRingClock">—</div>
+      </div>
+    </div>
+    <div class="day-ring-right">
+      <div class="day-ring-status" id="dayRingStatus">😴 Still sleeping</div>
+      <div class="day-ring-remaining" id="dayRingRemaining">—</div>
+      <div class="day-ring-hours">8:00 AM – 12:00 AM</div>
+    </div>
+  </div>
+
+  <div class="card weather-card" id="weatherCard">
+    <div class="weather-top">
+      <div>
+        <div class="weather-place">Potsdam</div>
+        <div class="weather-now">
+          <span class="weather-icon" id="weatherIcon">🌡️</span>
+          <span class="weather-temp" id="weatherTemp">--°</span>
+        </div>
+        <div class="weather-desc" id="weatherDesc">Lade Wetter…</div>
+      </div>
+      <div class="weather-right">
+        <div class="weather-sub" id="weatherFeels">Gefühlt --°</div>
+        <div class="weather-sub" id="weatherHiLo">H: --° T: --°</div>
+      </div>
+    </div>
+    <div class="weather-rain-note" id="weatherRainNote">Lade Regenvorhersage…</div>
+    <div class="weather-tip" id="weatherTip">Lade Tipp…</div>
+    <div class="weather-hourly" id="weatherHourly"></div>
+    <div class="weather-daily" id="weatherDaily"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">To Do List</div>
+
+    <div class="card gm-card" id="todayCard">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow" id="todayLabel">Today — </div>
+          <div class="gm-progress-row">
+            <span class="gm-progress-num" id="gmProgressNum">0</span>
+            <span class="gm-progress-total" id="gmProgressTotal">/ 0</span>
+            <span class="gm-progress-label" id="gmProgressLabel">no goals yet</span>
+          </div>
+        </div>
+        <div class="gm-streak" id="gmStreak">
+          <span class="gm-streak-bolt">⚡</span>
+          <span class="gm-streak-num" id="gmStreakNum">0</span>
+          <span class="gm-streak-label">day streak</span>
+        </div>
+      </div>
+
+      <div class="gm-bar" id="gmBar"></div>
+
+      <ul id="goalList" class="goal-list gm-list"></ul>
+      <div id="emptyState" class="empty-state">No goals for today yet — add one below.</div>
+
+      <button type="button" class="gm-push-btn" id="gmPushBtn" style="display:none;">Push remaining to tomorrow</button>
+
+      <div class="goal-input-wrap gm-input-wrap">
+        <input type="text" id="goalInput" class="gm-input" placeholder="Add a goal for today…" />
+        <button type="button" id="goalAddBtn" class="gm-btn-add">+ Add</button>
+        <button type="button" id="goalPolishBtn" class="gm-btn-polish">✨ Polish</button>
+      </div>
+      <div class="gm-status" id="polishStatus"></div>
+    </div>
+
+    <div class="card gm-card gm-card-tomorrow" id="tomorrowCard">
+      <div class="gm-header">
+        <div class="gm-header-left">
+          <div class="gm-eyebrow" id="tomorrowLabel">Plan tomorrow — </div>
+          <div class="gm-sub">Write tonight, locked until 6 AM.</div>
+        </div>
+        <div class="gm-tomorrow-count" id="gmTomorrowCount">0 planned</div>
+      </div>
+
+      <ul id="tomorrowList" class="goal-list gm-list"></ul>
+      <div id="tomorrowEmptyState" class="empty-state">Nothing planned for tomorrow yet</div>
+
+      <div class="goal-input-wrap gm-input-wrap">
+        <input type="text" id="tomorrowInput" class="gm-input" placeholder="Add a goal for tomorrow…" />
+        <button type="button" id="tomorrowAddBtn" class="gm-btn-add">+ Add</button>
+        <button type="button" id="tomorrowPolishBtn" class="gm-btn-polish">✨ Polish</button>
+      </div>
+      <div class="gm-status" id="tomorrowStatus"></div>
+    </div>
+  </div>
+
+  <div class="card news-card" id="newsCard">
+    <div class="news-section">
+      <div class="news-col-title">🇩🇪 Deutschland</div>
+      <div class="news-grid" id="newsDe"><div class="news-status">Lade Nachrichten…</div></div>
+    </div>
+    <div class="news-section">
+      <div class="news-col-title">📍 Brandenburg</div>
+      <div class="news-grid" id="newsBb"><div class="news-status">Lade Nachrichten…</div></div>
+    </div>
+  </div>
+
+  <div class="card stocks-card" id="stocksCard">
+    <div class="stocks-row" id="stocksRow"></div>
+    <div class="stocks-status" id="stocksStatus">Lade Marktdaten…</div>
+  </div>
+
+  <div class="card msci-card" id="msciCard">
+    <div class="msci-header">
+      <div>
+        <div class="msci-eyebrow">MSCI World</div>
+        <div class="msci-name">SPDR MSCI World UCITS ETF · SPPW.DE</div>
+      </div>
+      <div class="msci-price-block">
+        <div class="msci-price" id="msciBigPrice">--</div>
+        <div class="msci-change" id="msciBigChange">--</div>
+      </div>
+    </div>
+    <div class="msci-chart-wrap" id="msciChartWrap"></div>
+    <div class="msci-chart-labels">
+      <span id="msciChartStart">--</span>
+      <span id="msciChartEnd">Heute</span>
+    </div>
+    <div class="msci-analysis">
+      <div class="msci-stat">
+        <span class="msci-stat-label">3M Performance</span>
+        <span class="msci-stat-value" id="msciPerf3m">--</span>
+      </div>
+      <div class="msci-stat">
+        <span class="msci-stat-label">vs. 20T-Ø</span>
+        <span class="msci-stat-value" id="msciVsMa">--</span>
+      </div>
+      <div class="msci-stat">
+        <span class="msci-stat-label">Tagesspanne</span>
+        <span class="msci-stat-value" id="msciDayRangeStat">--</span>
+      </div>
+    </div>
+    <div class="msci-range-bar"><div class="msci-range-fill" id="msciRangeFill"></div><div class="msci-range-dot" id="msciRangeDot"></div></div>
+    <div class="msci-range-labels"><span id="msciRangeLowLabel">52W --</span><span id="msciRangeHighLabel">52W --</span></div>
+    <div class="msci-note" id="msciNote">Lade Analyse…</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ideas</div>
+    <div class="card" id="ideasCard">
+      <div class="idea-list" id="ideaList"></div>
+      <div id="ideaEmptyState" class="empty-state">No ideas yet — jot one down below.</div>
+      <div class="goal-input-wrap gm-input-wrap">
+        <input type="text" id="ideaInput" class="gm-input" placeholder="Add an idea…" />
+        <button type="button" id="ideaAddBtn" class="gm-btn-add">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar" id="bottomBar">
+    <div class="bottom-bar-inner">
+      <span class="bottom-bar-icon">⚡</span>
+      <span class="bottom-bar-text" id="bottomBarText">—</span>
+      <span class="bottom-bar-meta" id="bottomBarMeta">0/0</span>
+    </div>
+    <div class="bottom-bar-label">To Do List</div>
+  </div>
+
+  <nav class="taskbar" id="taskbar">
+    <a class="taskbar-item is-active" href="index.html" title="Start" aria-label="Start">
+      <span class="taskbar-icon-badge">🏠</span>
+      <span class="taskbar-label">Start</span>
+    </a>
+    <a class="taskbar-item" href="calendar.htm" title="Kalender" aria-label="Kalender">
+      <span class="taskbar-icon-badge">📅</span>
+      <span class="taskbar-label">Kalender</span>
+    </a>
+  </nav>
+
+<script>
+(function () {
+  'use strict';
+
+  const WAKE_HOUR = 8;
+  const SLEEP_HOUR = 24;
+  const ANTHROPIC_API_KEY = '';
+
+  /* ---------- storage helpers ---------- */
+  function storeGet(key) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : null;
+    } catch (e) { return null; }
+  }
+  function storeSet(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+    if (key.indexOf('goals:') === 0) {
+      window.dispatchEvent(new CustomEvent('goals-changed'));
+    }
+  }
+  function storeDelete(key) { localStorage.removeItem(key); }
+  function storeListKeys(prefix) {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf(prefix) === 0) keys.push(k);
+    }
+    return keys;
+  }
+
+  /* ---------- date helpers ---------- */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dateToStr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  function getActiveDateString() {
+    const now = new Date();
+    if (now.getHours() < 6) now.setDate(now.getDate() - 1);
+    return dateToStr(now);
+  }
+  function getTomorrowDateString() {
+    const now = new Date();
+    if (now.getHours() < 6) return dateToStr(now);
+    now.setDate(now.getDate() + 1);
+    return dateToStr(now);
+  }
+  function formatDate(str) {
+    const parts = str.split('-').map(Number);
+    const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+    const weekday = dt.toLocaleDateString('en-US', { weekday: 'short' });
+    const month = dt.toLocaleDateString('en-US', { month: 'short' });
+    return weekday + ', ' + month + ' ' + dt.getDate();
+  }
+
+  /* ---------- rollover + streak (run once on load, streak first) ---------- */
+  function streakCheck() {
+    let streak = storeGet('goal_streak_v1');
+    if (!streak) streak = { count: 0, lastProcessedDate: null };
+    const active = getActiveDateString();
+    let days = storeListKeys('goals:')
+      .map(k => k.slice('goals:'.length))
+      .filter(d => d < active);
+    if (streak.lastProcessedDate) {
+      days = days.filter(d => d > streak.lastProcessedDate);
+    }
+    days.sort();
+    days.forEach(d => {
+      const goals = storeGet('goals:' + d) || [];
+      if (goals.length === 0) {
+        /* skip, don't break the streak */
+      } else if (goals.every(g => g.done)) {
+        streak.count += 1;
+      } else {
+        streak.count = 0;
+      }
+      streak.lastProcessedDate = d;
+    });
+    localStorage.setItem('goal_streak_v1', JSON.stringify(streak));
+  }
+
+  function rollover() {
+    const active = getActiveDateString();
+    const keys = storeListKeys('goals:');
+    keys.forEach(k => {
+      const d = k.slice('goals:'.length);
+      if (d < active) {
+        const goals = storeGet(k) || [];
+        const undone = goals.filter(g => !g.done);
+        if (undone.length) {
+          const todayKey = 'goals:' + active;
+          const todayGoals = storeGet(todayKey) || [];
+          undone.forEach(g => {
+            if (!todayGoals.some(t => t.text === g.text)) {
+              todayGoals.push({ text: g.text, done: false });
+            }
+          });
+          localStorage.setItem(todayKey, JSON.stringify(todayGoals));
+        }
+        storeDelete(k);
+      }
+    });
+  }
+
+  /* ---------- Bottom Bar (queued/pending goal status) ---------- */
+  function updateBottomBar() {
+    const goals = storeGet('goals:' + getActiveDateString()) || [];
+    const total = goals.length;
+    const done = goals.filter(g => g.done).length;
+    const queued = goals.find(g => g.queued && !g.done);
+    const pending = goals.find(g => !g.done);
+    const textEl = document.getElementById('bottomBarText');
+    const metaEl = document.getElementById('bottomBarMeta');
+    if (queued) {
+      textEl.textContent = queued.text;
+    } else if (pending) {
+      textEl.textContent = pending.text;
+    } else if (total > 0) {
+      textEl.textContent = 'All goals done — solid day.';
+    } else {
+      textEl.textContent = 'No goals set for today yet.';
+    }
+    metaEl.textContent = done + '/' + total;
+  }
+
+  window.addEventListener('goals-changed', updateBottomBar);
+
+  /* ---------- Day Ring ---------- */
+  const RING_R = 52;
+  const RING_C = 2 * Math.PI * RING_R;
+  const sunStops = [
+    { p: 0,    c: [255, 216, 158] },
+    { p: 12.5, c: [255, 205, 121] },
+    { p: 25,   c: [255, 227, 143] },
+    { p: 37.5, c: [255, 183, 106] },
+    { p: 50,   c: [255, 149, 89] },
+    { p: 62.5, c: [243, 111, 79] },
+    { p: 75,   c: [226, 93, 122] },
+    { p: 87.5, c: [123, 91, 176] },
+    { p: 100,  c: [47, 58, 102] }
+  ];
+
+  function interpolateColor(percent) {
+    const p = Math.max(0, Math.min(100, percent));
+    let lower = sunStops[0], upper = sunStops[sunStops.length - 1];
+    for (let i = 0; i < sunStops.length - 1; i++) {
+      if (p >= sunStops[i].p && p <= sunStops[i + 1].p) {
+        lower = sunStops[i]; upper = sunStops[i + 1]; break;
+      }
+    }
+    const range = upper.p - lower.p;
+    const t = range === 0 ? 0 : (p - lower.p) / range;
+    const c = lower.c.map((v, i) => Math.round(v + (upper.c[i] - v) * t));
+    return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  }
+
+  function formatClock(d) {
+    let h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    return h + ':' + pad(m) + ' ' + ampm;
+  }
+
+  function formatRemaining(totalMinutes) {
+    const h = Math.floor(totalMinutes / 60);
+    const m = Math.round(totalMinutes % 60);
+    return h + 'h ' + m + 'm';
+  }
+
+  function updateDayBar() {
+    const now = new Date();
+    const hours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+
+    const fillEl = document.getElementById('dayRingFill');
+    const percentEl = document.getElementById('dayRingPercent');
+    const phaseEl = document.getElementById('dayRingPhase');
+    const clockEl = document.getElementById('dayRingClock');
+    const statusEl = document.getElementById('dayRingStatus');
+    const remainingEl = document.getElementById('dayRingRemaining');
+
+    clockEl.textContent = formatClock(now);
+    fillEl.setAttribute('stroke-dasharray', RING_C);
+
+    if (hours < WAKE_HOUR) {
+      fillEl.setAttribute('stroke-dashoffset', RING_C);
+      fillEl.style.stroke = '#4D4B47';
+      percentEl.textContent = '—';
+      phaseEl.textContent = 'SLEEPING';
+      statusEl.textContent = '😴 Still sleeping';
+      remainingEl.textContent = formatRemaining((WAKE_HOUR - hours) * 60) + ' until wake-up';
+    } else if (hours < SLEEP_HOUR) {
+      const percent = (hours - WAKE_HOUR) / (SLEEP_HOUR - WAKE_HOUR) * 100;
+      fillEl.setAttribute('stroke-dashoffset', RING_C * (1 - percent / 100));
+      fillEl.style.stroke = interpolateColor(percent);
+      percentEl.textContent = Math.round(percent) + '%';
+      let phase, status;
+      if (percent < 25)      { phase = 'MORNING';   status = '☀️ Morning — fresh start'; }
+      else if (percent < 50) { phase = 'MIDDAY';     status = '⚡ Midday — keep moving'; }
+      else if (percent < 75) { phase = 'AFTERNOON';  status = '🔥 Afternoon — push it'; }
+      else if (percent < 90) { phase = 'EVENING';     status = '⏳ Evening — wrap up'; }
+      else                   { phase = 'BEDTIME';     status = '🌙 Bedtime soon'; }
+      phaseEl.textContent = phase;
+      statusEl.textContent = status;
+      remainingEl.textContent = formatRemaining((SLEEP_HOUR - hours) * 60) + ' awake time left';
+    } else {
+      fillEl.setAttribute('stroke-dashoffset', 0);
+      fillEl.style.stroke = '#E25D7A';
+      percentEl.textContent = '100%';
+      phaseEl.textContent = 'PAST BEDTIME';
+      statusEl.textContent = '⚠️ Past bedtime';
+      remainingEl.textContent = 'Sleep!';
+    }
+  }
+
+  /* ---------- To Do List ---------- */
+  let dragSrcIdx = null;
+
+  function makeInlineEdit(el, goal, key, goals, reload) {
+    el.addEventListener('click', () => {
+      if (el.isContentEditable) return;
+      el.contentEditable = 'true';
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+    function commit() {
+      const newText = el.textContent.trim();
+      el.contentEditable = 'false';
+      if (newText && newText !== goal.text) {
+        goal.text = newText;
+        storeSet(key, goals);
+        reload();
+      } else {
+        el.textContent = goal.text;
+      }
+    }
+    function cancel() {
+      el.textContent = goal.text;
+      el.contentEditable = 'false';
+    }
+    el.addEventListener('blur', commit);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+  }
+
+  function wireDragReorder(li, key, goals, reload) {
+    li.addEventListener('dragstart', () => {
+      dragSrcIdx = Number(li.dataset.idx);
+    });
+    li.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      li.classList.add('drag-over');
+    });
+    li.addEventListener('dragleave', () => {
+      li.classList.remove('drag-over');
+    });
+    li.addEventListener('drop', (e) => {
+      e.preventDefault();
+      li.classList.remove('drag-over');
+      const toIdx = Number(li.dataset.idx);
+      if (dragSrcIdx === null || dragSrcIdx === toIdx) return;
+      const moved = goals.splice(dragSrcIdx, 1)[0];
+      goals.splice(toIdx, 0, moved);
+      dragSrcIdx = null;
+      storeSet(key, goals);
+      reload();
+    });
+  }
+
+  function buildGoalRow(goal, idx, goals, key, readOnly, reload) {
+    const li = document.createElement('li');
+    li.className = 'goal-row';
+    if (goal.done) li.classList.add('is-done');
+    if (goal.queued) li.classList.add('is-queued');
+    li.draggable = true;
+    li.dataset.idx = idx;
+
+    const handle = document.createElement('span');
+    handle.className = 'goal-drag-handle';
+    handle.textContent = '⋮⋮';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'goal-checkbox';
+    cb.checked = !!goal.done;
+    if (readOnly) { cb.disabled = true; cb.title = 'Activates at 6 AM tomorrow'; }
+    cb.addEventListener('change', () => {
+      goal.done = cb.checked;
+      if (cb.checked) goal.doneAt = Date.now(); else delete goal.doneAt;
+      storeSet(key, goals);
+      reload();
+    });
+
+    const text = document.createElement('span');
+    text.className = 'goal-text';
+    text.textContent = goal.text;
+    makeInlineEdit(text, goal, key, goals, reload);
+
+    const queueBtn = document.createElement('button');
+    queueBtn.type = 'button';
+    queueBtn.className = 'gm-queue-btn' + (goal.queued ? ' is-active' : '');
+    queueBtn.textContent = '⚡';
+    queueBtn.title = 'Queue for productivity window';
+    if (readOnly) queueBtn.disabled = true;
+    queueBtn.addEventListener('click', () => {
+      goal.queued = !goal.queued;
+      storeSet(key, goals);
+      li.classList.add('is-queue-flashing');
+      setTimeout(() => { reload(); }, 480);
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'goal-delete';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      goals.splice(idx, 1);
+      storeSet(key, goals);
+      reload();
+    });
+
+    li.appendChild(handle);
+    li.appendChild(cb);
+    li.appendChild(text);
+    li.appendChild(queueBtn);
+    li.appendChild(delBtn);
+
+    wireDragReorder(li, key, goals, reload);
+    return li;
+  }
+
+  function renderTodayHeader() {
+    const key = 'goals:' + getActiveDateString();
+    const goals = storeGet(key) || [];
+    const total = goals.length;
+    const done = goals.filter(g => g.done).length;
+
+    document.getElementById('gmProgressNum').textContent = done;
+    document.getElementById('gmProgressTotal').textContent = '/ ' + total;
+    const labelEl = document.getElementById('gmProgressLabel');
+    if (total === 0) labelEl.textContent = 'no goals yet';
+    else if (done === total) labelEl.textContent = 'all done — solid day';
+    else labelEl.textContent = 'complete';
+
+    const bar = document.getElementById('gmBar');
+    bar.innerHTML = '';
+    goals.forEach(g => {
+      const seg = document.createElement('div');
+      seg.className = 'gm-bar-seg' + (g.done ? ' gm-bar-seg-done' : '');
+      bar.appendChild(seg);
+    });
+
+    document.getElementById('todayCard').classList.toggle('gm-all-done', total > 0 && done === total);
+    document.getElementById('gmPushBtn').style.display = goals.some(g => !g.done) ? '' : 'none';
+    document.getElementById('todayLabel').textContent = 'Today — ' + formatDate(getActiveDateString());
+  }
+
+  function renderStreak() {
+    const streak = storeGet('goal_streak_v1') || { count: 0 };
+    document.getElementById('gmStreakNum').textContent = streak.count || 0;
+    document.getElementById('gmStreak').classList.toggle('gm-streak-active', (streak.count || 0) > 0);
+  }
+
+  function renderTomorrowCount() {
+    const key = 'goals:' + getTomorrowDateString();
+    const goals = storeGet(key) || [];
+    document.getElementById('gmTomorrowCount').textContent = goals.length + ' planned';
+    document.getElementById('tomorrowLabel').textContent = 'Plan tomorrow — ' + formatDate(getTomorrowDateString());
+  }
+
+  function renderListInto(goals, listEl, emptyEl, key, readOnly, reload) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = goals.length === 0 ? '' : 'none';
+
+    const expanded = listEl.dataset.expanded === 'true';
+    const visibleCount = (goals.length > 5 && !expanded) ? 5 : goals.length;
+    for (let i = 0; i < visibleCount; i++) {
+      listEl.appendChild(buildGoalRow(goals[i], i, goals, key, readOnly, reload));
+    }
+
+    const existingToggle = listEl.parentElement.querySelector('.gm-show-more');
+    if (existingToggle) existingToggle.remove();
+    if (goals.length > 5) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'gm-show-more';
+      toggle.textContent = expanded ? 'Show less ▴' : 'Show ' + (goals.length - 5) + ' more ▾';
+      toggle.addEventListener('click', () => {
+        listEl.dataset.expanded = expanded ? 'false' : 'true';
+        renderListInto(goals, listEl, emptyEl, key, readOnly, reload);
+      });
+      listEl.insertAdjacentElement('afterend', toggle);
+    }
+
+    if (key === 'goals:' + getActiveDateString()) {
+      renderTodayHeader();
+    } else {
+      renderTomorrowCount();
+    }
+  }
+
+  function loadToday() {
+    const key = 'goals:' + getActiveDateString();
+    const goals = storeGet(key) || [];
+    renderListInto(goals, document.getElementById('goalList'), document.getElementById('emptyState'), key, false, loadToday);
+  }
+  function loadTomorrow() {
+    const key = 'goals:' + getTomorrowDateString();
+    const goals = storeGet(key) || [];
+    renderListInto(goals, document.getElementById('tomorrowList'), document.getElementById('tomorrowEmptyState'), key, true, loadTomorrow);
+  }
+
+  document.getElementById('gmPushBtn').addEventListener('click', () => {
+    if (!confirm('Push all remaining goals to tomorrow?')) return;
+    const todayKey = 'goals:' + getActiveDateString();
+    const tomorrowKey = 'goals:' + getTomorrowDateString();
+    const todayGoals = storeGet(todayKey) || [];
+    const tomorrowGoals = storeGet(tomorrowKey) || [];
+    const unchecked = todayGoals.filter(g => !g.done);
+    unchecked.forEach(g => {
+      if (!tomorrowGoals.some(t => t.text === g.text)) {
+        tomorrowGoals.push({ text: g.text, done: false });
+      }
+    });
+    storeSet(tomorrowKey, tomorrowGoals);
+    storeSet(todayKey, todayGoals.filter(g => g.done));
+    loadToday();
+    loadTomorrow();
+  });
+
+  function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
+    function showStatus(msg, isError) {
+      statusEl.textContent = msg;
+      statusEl.classList.toggle('is-error', !!isError);
+      setTimeout(() => {
+        statusEl.textContent = '';
+        statusEl.classList.remove('is-error');
+      }, 3500);
+    }
+    function doAdd(text) {
+      const goals = storeGet(key) || [];
+      goals.push({ text: text, done: false });
+      storeSet(key, goals);
+      input.value = '';
+      reload();
+    }
+    addBtn.addEventListener('click', () => {
+      const text = input.value.trim();
+      if (!text) return;
+      doAdd(text);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        doAdd(text);
+      }
+    });
+    polishBtn.addEventListener('click', async () => {
+      const text = input.value.trim();
+      if (!text) return;
+      if (!ANTHROPIC_API_KEY) {
+        showStatus('Polish needs an Anthropic API key — added as-typed.', false);
+        doAdd(text);
+        return;
+      }
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 1000,
+            messages: [{
+              role: 'user',
+              content: 'Clean up and rewrite this single to-do goal to be clear and concise, fixing grammar and typos but keeping the original intent. Return ONLY a JSON array containing exactly one string — no preamble, no code fences, no explanation. Goal: ' + text
+            }]
+          })
+        });
+        if (!res.ok) throw new Error('bad response');
+        const data = await res.json();
+        const raw = (data.content && data.content[0] && data.content[0].text) || '';
+        const parsed = JSON.parse(raw);
+        const polished = (Array.isArray(parsed) && parsed[0]) ? String(parsed[0]) : text;
+        doAdd(polished);
+      } catch (err) {
+        showStatus('Polish failed — added as-typed.', true);
+        doAdd(text);
+      }
+    });
+  }
+
+  /* ---------- Weather (Potsdam, Open-Meteo) ---------- */
+  const WEATHER_LOCATION = { name: 'Potsdam', lat: 52.3906, lon: 13.0645 };
+  const WEATHER_ICONS = {
+    0: ['☀️', 'Klar'], 1: ['🌤️', 'Überwiegend klar'], 2: ['⛅', 'Teilweise bewölkt'], 3: ['☁️', 'Bedeckt'],
+    45: ['🌫️', 'Nebel'], 48: ['🌫️', 'Reifnebel'],
+    51: ['🌦️', 'Leichter Niesel'], 53: ['🌦️', 'Niesel'], 55: ['🌦️', 'Starker Niesel'],
+    56: ['🌧️', 'Gefrierender Niesel'], 57: ['🌧️', 'Gefrierender Niesel'],
+    61: ['🌧️', 'Leichter Regen'], 63: ['🌧️', 'Regen'], 65: ['🌧️', 'Starker Regen'],
+    66: ['🌧️', 'Gefrierender Regen'], 67: ['🌧️', 'Gefrierender Regen'],
+    71: ['🌨️', 'Leichter Schnee'], 73: ['🌨️', 'Schnee'], 75: ['🌨️', 'Starker Schnee'], 77: ['🌨️', 'Schneegriesel'],
+    80: ['🌦️', 'Regenschauer'], 81: ['🌦️', 'Regenschauer'], 82: ['⛈️', 'Heftige Schauer'],
+    85: ['🌨️', 'Schneeschauer'], 86: ['🌨️', 'Schneeschauer'],
+    95: ['⛈️', 'Gewitter'], 96: ['⛈️', 'Gewitter mit Hagel'], 99: ['⛈️', 'Gewitter mit Hagel']
+  };
+  function weatherIcon(code) { return (WEATHER_ICONS[code] || ['🌡️', '—'])[0]; }
+  function weatherDesc(code) { return (WEATHER_ICONS[code] || ['🌡️', 'Unbekannt'])[1]; }
+  function formatHourLabel(iso) { return new Date(iso).getHours() + ' Uhr'; }
+  function formatDayLabel(iso, idx) {
+    if (idx === 0) return 'Heute';
+    return new Date(iso).toLocaleDateString('de-DE', { weekday: 'short' });
+  }
+
+  function buildWeatherTip(dayMaxApparent, maxRainProb, dayMaxWind, currentlyRaining) {
+    let clothing;
+    if (dayMaxApparent < 0) clothing = '🥶 Sehr kalt heute — dick einpacken (Mütze, Handschuhe).';
+    else if (dayMaxApparent < 8) clothing = '🧥 Kalt heute — warme Jacke nicht vergessen.';
+    else if (dayMaxApparent < 15) clothing = '🧥 Frisch heute — eine Jacke reicht meist.';
+    else if (dayMaxApparent < 22) clothing = '👕 Angenehme Temperaturen — leichte Kleidung reicht.';
+    else if (dayMaxApparent < 28) clothing = '☀️ Warm heute — luftige Kleidung, viel trinken.';
+    else clothing = '🥵 Sehr heiß heute — leicht anziehen, Sonnenschutz nicht vergessen.';
+
+    let extras = '';
+    if (currentlyRaining) extras += ' ☔ Es regnet gerade — Regenjacke oder Schirm mitnehmen.';
+    else if (maxRainProb >= 50) extras += ' ☔ Regenjacke oder Schirm einpacken.';
+    else if (maxRainProb >= 25) extras += ' 🌂 Ein Schirm kann nicht schaden.';
+
+    if (dayMaxWind >= 50) extras += ' 💨 Stürmisch — auf lose Gegenstände achten.';
+    else if (dayMaxWind >= 30) extras += ' 💨 Windig — eine Jacke mit Kapuze ist praktisch.';
+
+    return clothing + extras;
+  }
+
+  async function loadWeather() {
+    const iconEl = document.getElementById('weatherIcon');
+    const tempEl = document.getElementById('weatherTemp');
+    const descEl = document.getElementById('weatherDesc');
+    const feelsEl = document.getElementById('weatherFeels');
+    const hiloEl = document.getElementById('weatherHiLo');
+    const rainNoteEl = document.getElementById('weatherRainNote');
+    const tipEl = document.getElementById('weatherTip');
+    const hourlyEl = document.getElementById('weatherHourly');
+    const dailyEl = document.getElementById('weatherDaily');
+    try {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + WEATHER_LOCATION.lat +
+        '&longitude=' + WEATHER_LOCATION.lon +
+        '&timezone=Europe%2FBerlin&forecast_days=7&current_weather=true' +
+        '&hourly=temperature_2m,precipitation_probability,precipitation,weathercode,apparent_temperature,wind_speed_10m' +
+        '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('weather fetch failed');
+      const data = await res.json();
+
+      const cw = data.current_weather;
+      iconEl.textContent = weatherIcon(cw.weathercode);
+      tempEl.textContent = Math.round(cw.temperature) + '°';
+      descEl.textContent = weatherDesc(cw.weathercode);
+
+      const hourlyTimes = data.hourly.time;
+      let nowIdx = 0;
+      for (let i = 0; i < hourlyTimes.length; i++) {
+        if (new Date(hourlyTimes[i]) > new Date(cw.time)) break;
+        nowIdx = i;
+      }
+      feelsEl.textContent = 'Gefühlt ' + Math.round(data.hourly.apparent_temperature[nowIdx]) + '°';
+      hiloEl.textContent = 'H: ' + Math.round(data.daily.temperature_2m_max[0]) + '° T: ' + Math.round(data.daily.temperature_2m_min[0]) + '°';
+
+      const RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+      const currentlyRaining = RAIN_CODES.indexOf(cw.weathercode) !== -1;
+
+      const todayStr = hourlyTimes[nowIdx].slice(0, 10);
+      let rainStartIdx = -1;
+      let maxProb = 0;
+      let maxPrecip = 0;
+      for (let i = nowIdx; i < hourlyTimes.length; i++) {
+        if (hourlyTimes[i].slice(0, 10) !== todayStr) break;
+        const prob = data.hourly.precipitation_probability[i];
+        const precip = data.hourly.precipitation[i];
+        if (prob > maxProb) maxProb = prob;
+        if (precip > maxPrecip) maxPrecip = precip;
+        if (rainStartIdx === -1 && (prob >= 45 || precip >= 0.3)) rainStartIdx = i;
+      }
+
+      if (currentlyRaining) {
+        rainNoteEl.textContent = '🌧 Gerade Regen — ' + weatherDesc(cw.weathercode).toLowerCase() + '.';
+        rainNoteEl.classList.add('is-rain');
+      } else if (rainStartIdx !== -1) {
+        rainNoteEl.textContent = '🌧 Regen ab ' + formatHourLabel(hourlyTimes[rainStartIdx]) + ' (' + data.hourly.precipitation_probability[rainStartIdx] + '% Wahrscheinlichkeit)';
+        rainNoteEl.classList.add('is-rain');
+      } else if (maxProb < 15 && maxPrecip < 0.1) {
+        rainNoteEl.textContent = '☀️ Kein Regen in den nächsten Stunden erwartet';
+        rainNoteEl.classList.remove('is-rain');
+      } else {
+        rainNoteEl.textContent = '🌦 Bis zu ' + maxProb + '% Regenwahrscheinlichkeit heute';
+        rainNoteEl.classList.remove('is-rain');
+      }
+
+      const dayApparent = data.hourly.apparent_temperature.slice(0, 24);
+      const dayWind = data.hourly.wind_speed_10m.slice(0, 24);
+      const dayMaxApparent = Math.max.apply(null, dayApparent);
+      const dayMaxWind = Math.max.apply(null, dayWind);
+      tipEl.textContent = buildWeatherTip(dayMaxApparent, maxProb, dayMaxWind, currentlyRaining);
+
+      hourlyEl.innerHTML = '';
+      const windowEnd = Math.min(nowIdx + 17, hourlyTimes.length);
+      for (let i = nowIdx; i < windowEnd; i++) {
+        const prob = data.hourly.precipitation_probability[i];
+        const isNow = i === nowIdx;
+        const item = document.createElement('div');
+        item.className = 'weather-hour' + (isNow ? ' is-now' : '');
+        item.innerHTML =
+          '<span class="weather-hour-time">' + (isNow ? 'Jetzt' : formatHourLabel(hourlyTimes[i])) + '</span>' +
+          '<span class="weather-hour-icon">' + weatherIcon(data.hourly.weathercode[i]) + '</span>' +
+          '<span class="weather-hour-temp">' + Math.round(data.hourly.temperature_2m[i]) + '°</span>' +
+          '<span class="weather-hour-precip-bar"><span class="weather-hour-precip-fill" style="height:' + Math.max(prob, 3) + '%;"></span></span>' +
+          '<span class="weather-hour-precip-label">' + (prob >= 10 ? prob + '%' : '') + '</span>';
+        hourlyEl.appendChild(item);
+      }
+
+      dailyEl.innerHTML = '';
+      const allMax = Math.max.apply(null, data.daily.temperature_2m_max);
+      const allMin = Math.min.apply(null, data.daily.temperature_2m_min);
+      const span = Math.max(1, allMax - allMin);
+      data.daily.time.forEach((dayIso, idx) => {
+        const max = data.daily.temperature_2m_max[idx];
+        const min = data.daily.temperature_2m_min[idx];
+        const prob = data.daily.precipitation_probability_max[idx];
+        const leftPct = ((min - allMin) / span) * 100;
+        const widthPct = ((max - min) / span) * 100;
+        const row = document.createElement('div');
+        row.className = 'weather-day-row';
+        row.innerHTML =
+          '<span class="weather-day-name">' + formatDayLabel(dayIso, idx) + '</span>' +
+          '<span class="weather-day-icon">' + weatherIcon(data.daily.weathercode[idx]) + '</span>' +
+          '<span class="weather-day-rain">' + (prob >= 20 ? prob + '%' : '') + '</span>' +
+          '<span class="weather-day-range">' +
+            '<span class="weather-day-min">' + Math.round(min) + '°</span>' +
+            '<span class="weather-day-bar"><span class="weather-day-bar-fill" style="left:' + leftPct + '%;width:' + widthPct + '%;"></span></span>' +
+            '<span class="weather-day-max">' + Math.round(max) + '°</span>' +
+          '</span>';
+        dailyEl.appendChild(row);
+      });
+    } catch (err) {
+      descEl.textContent = 'Wetter aktuell nicht verfügbar';
+      rainNoteEl.textContent = '';
+      tipEl.textContent = '';
+    }
+  }
+
+  /* ---------- News (tagesschau.de API2u) ---------- */
+  const TAGESSCHAU_BASE = 'https://www.tagesschau.de/api2u/';
+
+  function timeAgo(iso) {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 60) return 'vor ' + Math.max(mins, 0) + ' Min';
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return 'vor ' + hours + ' Std';
+    return 'vor ' + Math.round(hours / 24) + ' Tg';
+  }
+
+  function stripHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html || '';
+    return tmp.textContent.trim();
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  const NEWS_KEYWORD_PATTERNS = [
+    /\b[A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)*(?:\s[A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)*){1,3}\b/g,
+    /\b[A-ZÄÖÜ]{2,6}\b/g,
+    /\b\d[\d.,]*\s?(?:%|Prozent|Millionen|Milliarden|Euro|€|Uhr)?\b/g
+  ];
+
+  function highlightKeywords(escapedText) {
+    return NEWS_KEYWORD_PATTERNS.reduce(
+      (html, pattern) => html.replace(pattern, match => '<strong>' + match + '</strong>'),
+      escapedText
+    );
+  }
+
+  function excerptParagraphs(paragraphs, maxParagraphs, maxChars) {
+    const out = [];
+    let total = 0;
+    for (let i = 0; i < paragraphs.length && out.length < maxParagraphs; i++) {
+      const text = paragraphs[i];
+      if (!text) continue;
+      if (total + text.length > maxChars) {
+        const remaining = maxChars - total;
+        if (remaining > 40) {
+          out.push(text.slice(0, remaining).replace(/\s+\S*$/, '') + '…');
+        }
+        break;
+      }
+      out.push(text);
+      total += text.length;
+    }
+    return out;
+  }
+
+  function renderArticleBody(bodyInnerEl, item) {
+    bodyInnerEl.innerHTML = '';
+    if (item.topline) {
+      const topline = document.createElement('div');
+      topline.className = 'news-item-topline';
+      topline.textContent = item.topline;
+      bodyInnerEl.appendChild(topline);
+    }
+    const paragraphs = (item.content || [])
+      .filter(c => c.type === 'text' && c.value)
+      .map(c => stripHtml(c.value))
+      .filter(Boolean);
+    const excerpt = excerptParagraphs(paragraphs, 2, 420);
+    if (excerpt.length) {
+      excerpt.forEach(text => {
+        const el = document.createElement('p');
+        el.innerHTML = highlightKeywords(escapeHtml(text));
+        bodyInnerEl.appendChild(el);
+      });
+    } else {
+      const fallback = document.createElement('p');
+      fallback.innerHTML = highlightKeywords(escapeHtml(item.firstSentence || 'Volltext aktuell nicht verfügbar.'));
+      bodyInnerEl.appendChild(fallback);
+    }
+    const link = item.shareURL || item.detailsweb;
+    if (link) {
+      const a = document.createElement('a');
+      a.className = 'news-item-readmore';
+      a.href = link;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = 'Vollständigen Artikel öffnen ↗';
+      bodyInnerEl.appendChild(a);
+    }
+  }
+
+  function toggleNewsItem(li, item, bodyInnerEl) {
+    const wasExpanded = li.classList.contains('is-expanded');
+    if (wasExpanded) {
+      li.classList.remove('is-expanded');
+      return;
+    }
+    li.classList.add('is-expanded');
+    if (item.content) {
+      renderArticleBody(bodyInnerEl, item);
+      return;
+    }
+    if (!item.details) {
+      renderArticleBody(bodyInnerEl, item);
+      return;
+    }
+    bodyInnerEl.innerHTML = '<div class="news-item-loading">Lade Artikeltext…</div>';
+    fetch(item.details)
+      .then(res => { if (!res.ok) throw new Error('article fetch failed'); return res.json(); })
+      .then(data => {
+        item.content = data.content || [];
+        item.topline = item.topline || data.topline;
+        renderArticleBody(bodyInnerEl, item);
+      })
+      .catch(() => {
+        item.content = [];
+        renderArticleBody(bodyInnerEl, item);
+      });
+  }
+
+  function newsImageUrl(item) {
+    const variants = item.teaserImage && item.teaserImage.imageVariants;
+    if (!variants) return null;
+    return variants['16x9-512'] || variants['16x9-384'] || variants['16x9-256'] ||
+      Object.values(variants)[0] || null;
+  }
+
+  function renderNewsList(container, items) {
+    container.innerHTML = '';
+    if (!items.length) {
+      container.innerHTML = '<div class="news-status">Keine Nachrichten gefunden.</div>';
+      return;
+    }
+    items.slice(0, 6).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'news-card-item';
+
+      const clickable = document.createElement('div');
+      clickable.className = 'news-card-clickable';
+
+      const imgUrl = newsImageUrl(item);
+      if (imgUrl) {
+        const img = document.createElement('img');
+        img.className = 'news-card-image';
+        img.src = imgUrl;
+        img.alt = (item.teaserImage && item.teaserImage.alttext) || '';
+        img.loading = 'lazy';
+        clickable.appendChild(img);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'news-card-image-placeholder';
+        placeholder.textContent = '📰';
+        clickable.appendChild(placeholder);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'news-card-body';
+
+      const title = document.createElement('div');
+      title.className = 'news-card-title';
+      title.textContent = item.title;
+
+      const teaser = document.createElement('div');
+      teaser.className = 'news-card-teaser';
+      teaser.textContent = item.firstSentence || '';
+
+      const meta = document.createElement('div');
+      meta.className = 'news-card-meta';
+      const metaTime = document.createElement('span');
+      metaTime.textContent = timeAgo(item.date);
+      const chevron = document.createElement('span');
+      chevron.className = 'news-card-chevron';
+      chevron.textContent = '▾';
+      meta.appendChild(metaTime);
+      meta.appendChild(chevron);
+
+      body.appendChild(title);
+      body.appendChild(teaser);
+      body.appendChild(meta);
+      clickable.appendChild(body);
+
+      const full = document.createElement('div');
+      full.className = 'news-card-full';
+      const fullInner = document.createElement('div');
+      fullInner.className = 'news-item-body-inner';
+      full.appendChild(fullInner);
+
+      clickable.addEventListener('click', () => toggleNewsItem(card, item, fullInner));
+
+      card.appendChild(clickable);
+      card.appendChild(full);
+      container.appendChild(card);
+    });
+  }
+
+  async function loadNews() {
+    const deEl = document.getElementById('newsDe');
+    const bbEl = document.getElementById('newsBb');
+    try {
+      const res = await fetch(TAGESSCHAU_BASE + 'homepage');
+      if (!res.ok) throw new Error('news de failed');
+      const data = await res.json();
+      renderNewsList(deEl, data.news || []);
+    } catch (err) {
+      deEl.innerHTML = '<div class="news-status">Nachrichten aktuell nicht verfügbar.</div>';
+    }
+    try {
+      const res = await fetch(TAGESSCHAU_BASE + 'news/?regions=4');
+      if (!res.ok) throw new Error('news bb failed');
+      const data = await res.json();
+      renderNewsList(bbEl, data.news || []);
+    } catch (err) {
+      bbEl.innerHTML = '<div class="news-status">Regionale Nachrichten aktuell nicht verfügbar.</div>';
+    }
+  }
+
+  /* ---------- Stocks (Yahoo Finance via CORS proxy, multi-proxy fallback) ---------- */
+  const CORS_PROXIES = [
+    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+    url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url)
+  ];
+  const STOCK_TICKERS = [
+    { symbol: '^GDAXI', label: 'DAX' },
+    { symbol: '^GSPC', label: 'S&P 500' },
+    { symbol: 'SPPW.DE', label: 'MSCI World' },
+    { symbol: 'BTC-USD', label: 'Bitcoin', compact: true }
+  ];
+  const MSCI_TICKER = 'SPPW.DE';
+
+  async function fetchWithTimeout(url, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  async function fetchYahooChart(symbol, range) {
+    const target = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=' + range + '&interval=1d';
+    let lastErr = new Error('no proxies configured');
+    for (let round = 0; round < 2; round++) {
+      for (const buildProxyUrl of CORS_PROXIES) {
+        try {
+          const res = await fetchWithTimeout(buildProxyUrl(target), 6000);
+          if (!res.ok) throw new Error('proxy http ' + res.status);
+          const data = await res.json();
+          const result = data.chart && data.chart.result && data.chart.result[0];
+          if (!result) throw new Error('no result in payload');
+          return result;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (round === 0) await wait(600);
+    }
+    throw lastErr;
+  }
+
+  function formatStockPrice(price, compact) {
+    if (compact && price >= 1000) return '$' + (price / 1000).toFixed(1) + 'k';
+    if (price >= 1000) return Math.round(price).toLocaleString('de-DE');
+    return price.toFixed(1);
+  }
+
+  function formatStockChange(changePct) {
+    return (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%';
+  }
+
+  async function loadStocks() {
+    const row = document.getElementById('stocksRow');
+    const statusEl = document.getElementById('stocksStatus');
+    statusEl.textContent = 'Lade Marktdaten…';
+
+    const tiles = STOCK_TICKERS.map(() => document.createElement('div'));
+    tiles.forEach(t => { t.className = 'stock-tile'; });
+    row.innerHTML = '';
+    tiles.forEach(t => row.appendChild(t));
+
+    const results = await Promise.allSettled(
+      STOCK_TICKERS.map((t, i) => wait(i * 250).then(() => fetchYahooChart(t.symbol, '5d')))
+    );
+    let anyOk = false;
+    results.forEach((res, i) => {
+      const t = STOCK_TICKERS[i];
+      const tile = tiles[i];
+      if (res.status === 'fulfilled') {
+        const meta = res.value.meta;
+        const price = meta.regularMarketPrice;
+        const changePct = ((price - meta.chartPreviousClose) / meta.chartPreviousClose) * 100;
+        const up = changePct >= 0;
+        tile.innerHTML =
+          '<div class="stock-tile-name">' + t.label + '</div>' +
+          '<div class="stock-tile-price">' + formatStockPrice(price, t.compact) + '</div>' +
+          '<div class="stock-tile-change ' + (up ? 'is-up' : 'is-down') + '">' + formatStockChange(changePct) + '</div>';
+        anyOk = true;
+      } else {
+        tile.innerHTML = '<div class="stock-tile-name">' + t.label + '</div><div class="stock-tile-price">—</div>';
+      }
+    });
+    statusEl.textContent = anyOk ? '' : 'Marktdaten aktuell nicht verfügbar (Datenquelle blockiert oder offline).';
+  }
+
+  /* ---------- MSCI World - dedicated large chart + analysis ---------- */
+  function buildBigChart(closes) {
+    const w = 600, h = 220, pad = 10;
+    const min = Math.min.apply(null, closes), max = Math.max.apply(null, closes);
+    const span = Math.max(0.0001, max - min);
+    const stepX = (w - pad * 2) / (closes.length - 1);
+    const yFor = c => pad + (h - pad * 2) - ((c - min) / span) * (h - pad * 2);
+    const pts = closes.map((c, i) => (pad + i * stepX).toFixed(1) + ',' + yFor(c).toFixed(1));
+    const up = closes[closes.length - 1] >= closes[0];
+    const color = up ? '#6BE3A4' : '#FF6B6B';
+    const lastX = (pad + (closes.length - 1) * stepX).toFixed(1);
+    const areaPath = 'M' + pts[0] + ' L' + pts.join(' L') + ' L' + lastX + ',' + (h - pad) + ' L' + pad + ',' + (h - pad) + ' Z';
+    const startY = yFor(closes[0]).toFixed(1);
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+      '<defs><linearGradient id="msciGrad" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.32"/>' +
+        '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
+      '</linearGradient></defs>' +
+      '<line x1="' + pad + '" y1="' + startY + '" x2="' + (w - pad) + '" y2="' + startY + '" stroke="rgba(255,255,255,0.16)" stroke-width="1" stroke-dasharray="4 4"/>' +
+      '<path d="' + areaPath + '" fill="url(#msciGrad)" stroke="none"/>' +
+      '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+  }
+
+  function buildMsciNote(perf3m, vsMa, rangePos, dailyChangePct) {
+    const trendWord = perf3m >= 0 ? 'im Aufwärtstrend' : 'im Abwärtstrend';
+    const maWord = vsMa >= 0 ? 'über' : 'unter';
+    const dayWord = dailyChangePct >= 0 ? 'im Plus' : 'im Minus';
+    return 'Heute ' + dayWord + ' (' + formatStockChange(dailyChangePct) + '). Über die letzten 3 Monate ' + trendWord +
+      ' (' + formatStockChange(perf3m) + '). Kurs liegt ' + maWord + ' dem 20-Tage-Durchschnitt (' + formatStockChange(vsMa) +
+      ') und bei ' + Math.round(rangePos) + '% der 52-Wochen-Spanne.';
+  }
+
+  async function loadMsciDetail() {
+    const noteEl = document.getElementById('msciNote');
+    try {
+      const result = await fetchYahooChart(MSCI_TICKER, '3mo');
+      const meta = result.meta;
+      const quote = result.indicators.quote[0];
+      const timestamps = result.timestamp;
+      const closes = [];
+      const times = [];
+      for (let i = 0; i < quote.close.length; i++) {
+        if (quote.close[i] != null) { closes.push(quote.close[i]); times.push(timestamps[i]); }
+      }
+      if (closes.length < 2) throw new Error('not enough data points');
+
+      const price = meta.regularMarketPrice;
+      const dailyChangePct = ((price - meta.chartPreviousClose) / meta.chartPreviousClose) * 100;
+      const up = dailyChangePct >= 0;
+
+      document.getElementById('msciBigPrice').textContent = formatStockPrice(price, false);
+      const changeEl = document.getElementById('msciBigChange');
+      changeEl.textContent = formatStockChange(dailyChangePct);
+      changeEl.className = 'msci-change ' + (up ? 'is-up' : 'is-down');
+
+      document.getElementById('msciChartWrap').innerHTML = buildBigChart(closes);
+      document.getElementById('msciChartStart').textContent =
+        new Date(times[0] * 1000).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+
+      const perf3m = ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100;
+      const maWindow = closes.slice(Math.max(0, closes.length - 20));
+      const ma20 = maWindow.reduce((a, b) => a + b, 0) / maWindow.length;
+      const vsMa = ((price - ma20) / ma20) * 100;
+      const rangePos = Math.max(0, Math.min(100, ((price - meta.fiftyTwoWeekLow) / (meta.fiftyTwoWeekHigh - meta.fiftyTwoWeekLow)) * 100));
+
+      const perfEl = document.getElementById('msciPerf3m');
+      perfEl.textContent = formatStockChange(perf3m);
+      perfEl.className = 'msci-stat-value ' + (perf3m >= 0 ? 'is-up' : 'is-down');
+
+      const maEl = document.getElementById('msciVsMa');
+      maEl.textContent = formatStockChange(vsMa);
+      maEl.className = 'msci-stat-value ' + (vsMa >= 0 ? 'is-up' : 'is-down');
+
+      document.getElementById('msciDayRangeStat').textContent =
+        meta.regularMarketDayLow.toFixed(1) + '–' + meta.regularMarketDayHigh.toFixed(1);
+
+      document.getElementById('msciRangeFill').style.width = rangePos + '%';
+      document.getElementById('msciRangeDot').style.left = rangePos + '%';
+      document.getElementById('msciRangeLowLabel').textContent = '52W ' + meta.fiftyTwoWeekLow.toFixed(1);
+      document.getElementById('msciRangeHighLabel').textContent = '52W ' + meta.fiftyTwoWeekHigh.toFixed(1);
+
+      noteEl.textContent = buildMsciNote(perf3m, vsMa, rangePos, dailyChangePct);
+    } catch (err) {
+      noteEl.textContent = 'Analyse aktuell nicht verfügbar (Datenquelle blockiert oder offline).';
+    }
+  }
+
+  /* ---------- Ideas (drag-to-sort brain dump) ---------- */
+  function buildIdeaRow(idea, idx, ideas, reload) {
+    const row = document.createElement('div');
+    row.className = 'idea-row';
+    row.draggable = true;
+    row.dataset.idx = idx;
+
+    const handle = document.createElement('span');
+    handle.className = 'idea-drag-handle';
+    handle.textContent = '⋮⋮';
+
+    const rank = document.createElement('span');
+    rank.className = 'idea-rank';
+    rank.textContent = (idx + 1) + '.';
+
+    const text = document.createElement('span');
+    text.className = 'idea-text';
+    text.textContent = idea.text;
+    makeInlineEdit(text, idea, 'ideas_v1', ideas, reload);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'idea-delete';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => {
+      ideas.splice(idx, 1);
+      storeSet('ideas_v1', ideas);
+      reload();
+    });
+
+    row.appendChild(handle);
+    row.appendChild(rank);
+    row.appendChild(text);
+    row.appendChild(delBtn);
+
+    wireDragReorder(row, 'ideas_v1', ideas, reload);
+    return row;
+  }
+
+  function loadIdeas() {
+    const ideas = storeGet('ideas_v1') || [];
+    const listEl = document.getElementById('ideaList');
+    const emptyEl = document.getElementById('ideaEmptyState');
+    listEl.innerHTML = '';
+    emptyEl.style.display = ideas.length === 0 ? '' : 'none';
+    ideas.forEach((idea, idx) => {
+      listEl.appendChild(buildIdeaRow(idea, idx, ideas, loadIdeas));
+    });
+  }
+
+  function addIdea() {
+    const input = document.getElementById('ideaInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const ideas = storeGet('ideas_v1') || [];
+    ideas.push({ text: text });
+    storeSet('ideas_v1', ideas);
+    input.value = '';
+    loadIdeas();
+  }
+  document.getElementById('ideaAddBtn').addEventListener('click', addIdea);
+  document.getElementById('ideaInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addIdea(); }
+  });
+
+  /* ---------- init ---------- */
+  streakCheck();
+  rollover();
+
+  makeAddHandlers(
+    document.getElementById('goalInput'),
+    document.getElementById('goalAddBtn'),
+    document.getElementById('goalPolishBtn'),
+    'goals:' + getActiveDateString(),
+    document.getElementById('polishStatus'),
+    loadToday
+  );
+  makeAddHandlers(
+    document.getElementById('tomorrowInput'),
+    document.getElementById('tomorrowAddBtn'),
+    document.getElementById('tomorrowPolishBtn'),
+    'goals:' + getTomorrowDateString(),
+    document.getElementById('tomorrowStatus'),
+    loadTomorrow
+  );
+
+  loadToday();
+  loadTomorrow();
+  renderStreak();
+
+  updateDayBar();
+  setInterval(updateDayBar, 60 * 1000);
+
+  updateBottomBar();
+
+  loadIdeas();
+
+  loadWeather();
+  setInterval(loadWeather, 15 * 60 * 1000);
+
+  loadNews();
+  setInterval(loadNews, 10 * 60 * 1000);
+
+  loadStocks();
+  setInterval(loadStocks, 5 * 60 * 1000);
+
+  loadMsciDetail();
+  setInterval(loadMsciDetail, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
